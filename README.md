@@ -121,3 +121,5 @@ update-desktop-database ~/.local/share/applications || true
 rm -f ~/.local/bin/ocr.sh
 ```
 
+## Demo
+<img src="/images/ocr-for-spectacle/OCR.gif" alt="OCR" style="display: block; margin: 0 0;">
