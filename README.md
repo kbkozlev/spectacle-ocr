@@ -1,7 +1,7 @@
 # spectacle-ocr
 
 Add quick **OCR (text extraction)** to screenshots you take with **Spectacle**.  
-Right-click an image (or use Spectacle’s “Open With”) → **Extract Text** → the recognized text lands in your clipboard, with a desktop notification.
+In Spectacle select **Extract** or right click an image → **Extract Text** → the recognized text lands in your clipboard, with a desktop notification.
 
 ---
 
