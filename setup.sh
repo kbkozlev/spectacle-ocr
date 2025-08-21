@@ -22,8 +22,8 @@ else
   FG_RED=""; FG_GRN=""; FG_YLW=""; FG_BLU=""; FG_MAG=""; FG_CYN=""; FG_WHT=""
 fi
 
-hr() { printf '\n%s\n' "${DIM}----------------------------------------${RESET}"; }
-say() { printf '%b\n' "$*${RESET}"; }          # plain
+hr()   { printf '\n%b\n' "${DIM}----------------------------------------${RESET}"; }
+say()  { printf '%b\n' "$*${RESET}"; }                 # plain
 info() { printf '%b\n' "${FG_CYN}$*${RESET}"; }
 ok()   { printf '%b\n' "${FG_GRN}$*${RESET}"; }
 warn() { printf '%b\n' "${FG_YLW}$*${RESET}"; }
@@ -68,7 +68,6 @@ on_wayland() {
 ########################################
 # Dependency planning + confirmation
 ########################################
-# Build a list of packages for the detected distro
 plan_packages() {
   local mgr="$1" clip_pkg="$2"
   case "$mgr" in
@@ -116,7 +115,6 @@ confirm_install() {
     exit 0
   fi
 
-  # Return the resolved clipboard package via a global for reuse
   export __CLIP_PKG="$clip_pkg"
   export __PKG_LIST="$pkgs"
 }
