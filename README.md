@@ -3,7 +3,10 @@
 Add quick **OCR (text extraction)** to screenshots you take with **Spectacle**.  
 In Spectacle select **Extract** or right click an image → **Extract Text** → the recognized text lands in your clipboard, with a desktop notification.
 
----
+
+
+## Demo
+![image](https://picsur.kozlev.com/i/46b43439-26a6-43e0-9bcc-0dd998be1492.gif)
 
 ## ✨ Features
 
@@ -13,7 +16,6 @@ In Spectacle select **Extract** or right click an image → **Extract Text** →
 - 🔔 Desktop notifications for success and errors  
 - 🧹 Cleans up temporary files automatically
 
----
 
 ## 📦 Requirements
 
@@ -27,7 +29,7 @@ In Spectacle select **Extract** or right click an image → **Extract Text** →
 
 > These are installed automatically by the setup script below.
 
----
+
 
 ## 🚀 Installation
 
@@ -79,7 +81,7 @@ In Spectacle select **Extract** or right click an image → **Extract Text** →
    update-desktop-database ~/.local/share/applications || true
    ```
 
----
+
 
 ## 🧰 Usage
 
@@ -94,7 +96,6 @@ ocr.sh /path/to/image.png
 # Result is copied to the clipboard; notification is shown.
 ```
 
----
 
 ## ⚙️ Configuration
 
@@ -103,7 +104,7 @@ ocr.sh /path/to/image.png
   - English only: `LANG="eng"`
   - English + German: `LANG="eng+deu"`
   - Add other Tesseract langs if installed (e.g., `spa`, `fra`, etc.).
----
+
 
 ## 🧪 Notes & Limitations
 
@@ -111,7 +112,7 @@ ocr.sh /path/to/image.png
 - **ImageMagick policies**: Some distros restrict certain operations via ImageMagick’s policy file. If you hit errors, check `/etc/ImageMagick-*/policy.xml`.
 - **Input formats**: The `.desktop` entry registers for `image/png`. Extend `MimeType` if you want JPEG, etc.
 
----
+
 
 ## 🧹 Uninstall
 
@@ -120,6 +121,3 @@ rm -f ~/.local/share/applications/spectacle-ocr.desktop
 update-desktop-database ~/.local/share/applications || true
 rm -f ~/.local/bin/ocr.sh
 ```
-
-## Demo
-<img src="/images/ocr-for-spectacle/OCR.gif" alt="OCR" style="display: block; margin: 0 0;">
