@@ -1,12 +1,38 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# --- Helpers ---
-echo_hr() { printf '\n%s\n' "----------------------------------------"; }
-
-need_cmd() {
-  command -v "$1" >/dev/null 2>&1
+########################################
+# Color & formatting
+########################################
+_use_color() {
+  # Enable color only if stdout is a TTY and NO_COLOR isn't set
+  if [[ -t 1 && -z "${NO_COLOR:-}" ]]; then
+    return 0
+  else
+    return 1
+  fi
 }
+
+if _use_color; then
+  BOLD="\033[1m"; DIM="\033[2m"; RESET="\033[0m"
+  FG_RED="\033[31m"; FG_GRN="\033[32m"; FG_YLW="\033[33m"
+  FG_BLU="\033[34m"; FG_MAG="\033[35m"; FG_CYN="\033[36m"; FG_WHT="\033[37m"
+else
+  BOLD=""; DIM=""; RESET=""
+  FG_RED=""; FG_GRN=""; FG_YLW=""; FG_BLU=""; FG_MAG=""; FG_CYN=""; FG_WHT=""
+fi
+
+hr() { printf '\n%s\n' "${DIM}----------------------------------------${RESET}"; }
+say() { printf '%b\n' "$*${RESET}"; }          # plain
+info() { printf '%b\n' "${FG_CYN}$*${RESET}"; }
+ok()   { printf '%b\n' "${FG_GRN}$*${RESET}"; }
+warn() { printf '%b\n' "${FG_YLW}$*${RESET}"; }
+err()  { printf '%b\n' "${FG_RED}$*${RESET}" >&2; }
+
+########################################
+# Helpers
+########################################
+need_cmd() { command -v "$1" >/dev/null 2>&1; }
 
 as_root() {
   if [ "$(id -u)" -eq 0 ]; then
@@ -14,8 +40,8 @@ as_root() {
   elif need_cmd sudo; then
     sudo "$@"
   else
-    echo "Error: Need root privileges to run: $*" >&2
-    echo "Please run this script as root or install sudo." >&2
+    err "Need root privileges to run: $*"
+    err "Please run this script as root or install sudo."
     exit 1
   fi
 }
@@ -39,56 +65,97 @@ on_wayland() {
   fi
 }
 
-install_deps() {
+########################################
+# Dependency planning + confirmation
+########################################
+# Build a list of packages for the detected distro
+plan_packages() {
+  local mgr="$1" clip_pkg="$2"
+  case "$mgr" in
+    apt)    echo "tesseract-ocr imagemagick $clip_pkg libnotify-bin desktop-file-utils" ;;
+    dnf)    echo "tesseract ImageMagick $clip_pkg libnotify desktop-file-utils" ;;
+    yum)    echo "tesseract ImageMagick $clip_pkg libnotify desktop-file-utils" ;;
+    pacman) echo "tesseract imagemagick $clip_pkg libnotify desktop-file-utils" ;;
+    zypper) echo "tesseract ImageMagick $clip_pkg libnotify-tools desktop-file-utils" ;;
+    apk)    echo "tesseract-ocr imagemagick $clip_pkg libnotify desktop-file-utils" ;;
+    *)      echo "" ;;
+  esac
+}
+
+confirm_install() {
   local mgr="$1"
-  local clip_pkg=""
-  if on_wayland; then
-    clip_pkg="wl-clipboard"
-  else
-    clip_pkg="xclip"
+  local clip_pkg
+  if on_wayland; then clip_pkg="wl-clipboard"; else clip_pkg="xclip"; fi
+
+  local pkgs
+  pkgs="$(plan_packages "$mgr" "$clip_pkg")"
+
+  if [ -z "$pkgs" ]; then
+    err "Could not detect a supported package manager."
+    say "Please install these manually, then re-run:"
+    say "  - tesseract (or tesseract-ocr)"
+    say "  - ImageMagick"
+    say "  - ${clip_pkg}"
+    say "  - libnotify (libnotify-bin / libnotify-tools)"
+    say "  - desktop-file-utils"
+    exit 1
   fi
 
-  echo_hr
-  echo "Installing dependencies using package manager: $mgr"
-  echo " - OCR: Tesseract"
-  echo " - Images: ImageMagick"
-  echo " - Clipboard: $clip_pkg"
-  echo " - Notifications: libnotify (notify-send)"
-  echo " - Desktop DB tool: desktop-file-utils"
-  echo_hr
+  hr
+  info "${BOLD}The script needs to install the following packages:${RESET}"
+  say "  ${FG_WHT}${pkgs}${RESET}"
+  say
+  warn "This will use '${mgr}' and may download packages from your configured repositories."
+  say
+  printf '%b' "${FG_MAG}${BOLD}Proceed with installation? [Y/n]: ${RESET}"
+  local reply
+  read -r reply
+  reply="${reply:-Y}"
+  if [[ ! "$reply" =~ ^[Yy]$ ]]; then
+    warn "Installation aborted by user. Exiting."
+    exit 0
+  fi
+
+  # Return the resolved clipboard package via a global for reuse
+  export __CLIP_PKG="$clip_pkg"
+  export __PKG_LIST="$pkgs"
+}
+
+install_deps() {
+  local mgr="$1"
+  local pkgs="$2"
+
+  hr
+  info "${BOLD}Installing dependencies using package manager:${RESET} ${FG_WHT}$mgr${RESET}"
+  say "Packages: ${FG_WHT}$pkgs${RESET}"
+  hr
 
   case "$mgr" in
     apt)
       as_root apt-get update -y
-      # Debian/Ubuntu package names:
-      as_root apt-get install -y tesseract-ocr imagemagick "$clip_pkg" libnotify-bin desktop-file-utils
+      as_root apt-get install -y $pkgs
       ;;
     dnf)
-      as_root dnf install -y tesseract ImageMagick "$clip_pkg" libnotify desktop-file-utils
+      as_root dnf install -y $pkgs
       ;;
     yum)
-      as_root yum install -y tesseract ImageMagick "$clip_pkg" libnotify desktop-file-utils
+      as_root yum install -y $pkgs
       ;;
     pacman)
-      as_root pacman -Sy --noconfirm tesseract imagemagick "$clip_pkg" libnotify desktop-file-utils
+      as_root pacman -Sy --noconfirm $pkgs
       ;;
     zypper)
-      as_root zypper --non-interactive install tesseract ImageMagick "$clip_pkg" libnotify-tools desktop-file-utils
+      as_root zypper --non-interactive install $pkgs
       ;;
     apk)
-      as_root apk add --no-cache tesseract-ocr imagemagick "$clip_pkg" libnotify desktop-file-utils
+      as_root apk add --no-cache $pkgs
       ;;
     *)
-      echo "Could not detect a supported package manager."
-      echo "Please install these manually, then re-run:"
-      echo "  - tesseract (or tesseract-ocr)"
-      echo "  - ImageMagick"
-      echo "  - $clip_pkg"
-      echo "  - libnotify (or libnotify-bin / libnotify-tools)"
-      echo "  - desktop-file-utils"
+      err "Unsupported package manager after confirmation step."
       exit 1
       ;;
   esac
+  ok "Dependencies installed."
 }
 
 write_desktop_file() {
@@ -110,36 +177,40 @@ Categories=Utility;
 StartupNotify=false
 EOF
 
-  echo "Wrote desktop entry: $desktop_file"
+  ok "Wrote desktop entry: ${desktop_file}"
 
   if need_cmd update-desktop-database; then
     update-desktop-database "$desktop_dir" || true
-    echo "Updated desktop database for: $desktop_dir"
+    info "Updated desktop database for: ${desktop_dir}"
   else
-    echo "'update-desktop-database' not found. It will update automatically later, or install 'desktop-file-utils' and run it."
+    warn "'update-desktop-database' not found. It will update automatically later, or install 'desktop-file-utils' and run it."
   fi
 }
 
-# --- Start ---
-echo_hr
-echo "OCR Setup for ocr.sh"
-echo_hr
+########################################
+# Main
+########################################
+hr
+info "${BOLD}OCR Setup for ocr.sh${RESET}"
+hr
 
-# 1) Ensure ocr.sh exists next to this setup script
+# Ensure ocr.sh exists next to this setup script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SOURCE_SCRIPT="$SCRIPT_DIR/ocr.sh"
 if [ ! -f "$SOURCE_SCRIPT" ]; then
-  echo "Error: Could not find 'ocr.sh' next to this setup script at: $SOURCE_SCRIPT" >&2
+  err "Could not find 'ocr.sh' next to this setup script at: $SOURCE_SCRIPT"
   exit 1
 fi
 
-# 2) Install dependencies
+# Detect package manager & confirm install
 PKG_MGR="$(detect_pkg_mgr)"
-install_deps "$PKG_MGR"
+confirm_install "$PKG_MGR"   # sets __CLIP_PKG and __PKG_LIST
+install_deps "$PKG_MGR" "$__PKG_LIST"
 
-# 3) Choose installation directory (default ~/.local/bin)
+# Choose installation directory
 DEFAULT_INSTALL_DIR="$HOME/.local/bin"
-read -r -p "Installation directory [$DEFAULT_INSTALL_DIR]: " INSTALL_DIR
+printf '%b' "${FG_MAG}${BOLD}Installation directory${RESET} ${DIM}[default: ${DEFAULT_INSTALL_DIR}]${RESET}: "
+read -r INSTALL_DIR
 INSTALL_DIR="${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
 
 mkdir -p "$INSTALL_DIR"
@@ -148,12 +219,12 @@ TARGET_SCRIPT="$INSTALL_DIR/ocr.sh"
 cp -f "$SOURCE_SCRIPT" "$TARGET_SCRIPT"
 chmod +x "$TARGET_SCRIPT"
 
-echo "Installed: $TARGET_SCRIPT"
-echo "Make sure '$INSTALL_DIR' is in your PATH."
+ok "Installed: ${TARGET_SCRIPT}"
+say "${DIM}Make sure '${INSTALL_DIR}' is in your PATH.${RESET}"
 
-# 4) Create desktop entry
+# Create desktop entry
 write_desktop_file "$TARGET_SCRIPT"
 
-echo_hr
-echo "All set!"
-echo_hr
+hr
+ok "${BOLD}All set!${RESET}"
+hr
