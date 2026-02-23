@@ -1,3 +1,6 @@
+# Update
+**23/02/2026** - Spectacle now supports OCR natively, therefore archiving this repo.
+
 # spectacle-ocr
 
 Add quick **OCR (text extraction)** to screenshots you take with **Spectacle**.  
