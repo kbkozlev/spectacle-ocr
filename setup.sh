@@ -75,7 +75,7 @@ plan_packages() {
     dnf)    echo "tesseract ImageMagick $clip_pkg libnotify desktop-file-utils" ;;
     yum)    echo "tesseract ImageMagick $clip_pkg libnotify desktop-file-utils" ;;
     pacman) echo "tesseract imagemagick $clip_pkg libnotify desktop-file-utils" ;;
-    zypper) echo "tesseract ImageMagick $clip_pkg libnotify-tools desktop-file-utils" ;;
+    zypper) echo "tesseract-ocr ImageMagick $clip_pkg libnotify-tools desktop-file-utils" ;;
     apk)    echo "tesseract-ocr imagemagick $clip_pkg libnotify desktop-file-utils" ;;
     *)      echo "" ;;
   esac
