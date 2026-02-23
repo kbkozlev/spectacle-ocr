@@ -20,7 +20,14 @@ fi
 
 # Resize for better OCR
 RESIZED="/tmp/ocr_resized_$$.png"
-magick "$IMAGE" -resize 400% "$RESIZED"
+if command -v magick >/dev/null 2>&1; then
+  magick "$IMAGE" -resize 400% "$RESIZED"
+elif command -v convert >/dev/null 2>&1; then
+  convert "$IMAGE" -resize 400% "$RESIZED"
+else
+  notify-send -i dialog-error "OCR Error" "ImageMagick not found (need 'magick' or 'convert')"
+  exit 1
+fi
 
 # Perform OCR
 OCR_OUTPUT=$(tesseract --psm 6 -l "$LANG" "$RESIZED" - 2>&1)
